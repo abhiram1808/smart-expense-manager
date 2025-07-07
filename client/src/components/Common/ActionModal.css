@@ -1,0 +1,94 @@
+/* Modal overlay background */
+.action-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal box */
+.action-modal-content {
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px 20px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  animation: scaleFadeIn 0.4s ease forwards;
+}
+
+.modal-icon {
+  font-size: 60px;
+  margin-bottom: 15px;
+}
+
+/* Title animation */
+.pop-in-title {
+  font-weight: 600;
+  font-size: 20px;
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* Button area animation */
+.fade-in-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  animation: fadeIn 0.6s ease forwards;
+}
+
+/* Icon buttons */
+.icon-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.icon-button:hover {
+  transform: scale(1.2);
+}
+
+/* Icon colors */
+.green {
+  color: #28a745;
+}
+.red {
+  color: #dc3545;
+}
+.blue {
+  color: #007bff;
+}
+.rotate {
+  transform: rotate(90deg);
+}
+
+/* Animations */
+@keyframes scaleFadeIn {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

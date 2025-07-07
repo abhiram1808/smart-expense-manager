@@ -1,0 +1,85 @@
+/* IncomeList.css */
+
+/* ✅ Highlight newly added income row with fade + slide + green glow */
+.pulse-add {
+  animation: highlightFadeIn 0.5s ease-out;
+  background-color: #d4edda !important; /* Light green background */
+}
+
+/* ✨ Keyframe animation for entry highlight */
+@keyframes highlightFadeIn {
+  0% {
+    background-color: #d4edda;
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    background-color: white;
+    transform: translateY(0);
+  }
+}
+
+/* 🧨 Fade-out animation for deleted row (optional if using delete animation) */
+.fade-out {
+  animation: fadeOutRow 0.3s forwards;
+}
+
+@keyframes fadeOutRow {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* 📅 Card header style for monthly group */
+.income-group-header {
+  background-color: #f8f9fa;
+  cursor: pointer;
+  padding: 12px 16px;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 💼 Income table styles */
+.income-table th,
+.income-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* ✏️ Action button spacing */
+.income-actions button {
+  margin: 0 4px;
+}
+
+.fade-out {
+  animation: fadeOut 0.4s ease forwards;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+.modal-body {
+  background: #fff;
+  border-radius: 10px;
+}
+
+.text-success { color: green; }
+.text-danger { color: red; }
+.text-primary { color: blue; }

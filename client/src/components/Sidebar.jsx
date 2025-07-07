@@ -1,0 +1,102 @@
+// src/components/Sidebar.jsx
+import React, { useState } from 'react'; // Import useState for managing dropdown state
+import { Link, useLocation } from 'react-router-dom';
+import {
+  FaTachometerAlt,
+  FaPlus,
+  FaList,
+  FaChartPie, // Used for the parent Analytics icon
+  FaMoneyBillWave,
+  FaPiggyBank,
+  FaCog,
+  FaUserShield,
+  FaChevronDown, // New icon for dropdown indication
+  FaChevronUp // New icon for dropdown indication
+} from 'react-icons/fa';
+
+const Sidebar = () => {
+  const location = useLocation();
+  const [openAnalytics, setOpenAnalytics] = useState(false); // State to manage Analytics dropdown
+
+  // Check if current path is within analytics sub-paths to keep it open
+  const isAnalyticsPathActive = location.pathname === '/analytics' || location.pathname === '/budget-analytics';
+
+  // Define navigation items, now supporting nested items for Analytics
+  const navItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: <FaTachometerAlt /> },
+    { path: '/add-expense', label: 'Add Expense', icon: <FaPlus /> },
+    { path: '/expenses', label: 'Expense List', icon: <FaList /> },
+    {
+      label: 'Analytics', // Parent item for Analytics
+      icon: <FaChartPie />,
+      children: [
+        { path: '/analytics', label: 'Income Analytics' }, // Original Analytics page
+        { path: '/budget-analytics', label: 'Budget Analytics' } // New Budget Analytics page
+      ]
+    },
+    { path: '/monthly-income', label: 'Income', icon: <FaMoneyBillWave /> },
+    { path: '/monthly-budget', label: 'Budget', icon: <FaPiggyBank /> },
+    { path: '/common-expenses', label: 'Common Expenses', icon: <FaCog /> },
+    { path: '/admin', label: 'Admin', icon: <FaUserShield /> }
+  ];
+
+  // Effect to automatically open Analytics dropdown if one of its children is active
+  React.useEffect(() => {
+    if (isAnalyticsPathActive) {
+      setOpenAnalytics(true);
+    }
+  }, [isAnalyticsPathActive]);
+
+
+  return (
+    <div className="sidebar bg-dark text-white p-3" style={{ minWidth: '220px', height: '100vh', overflowY: 'auto' }}>
+      <h4 className="mb-4">💼 Expense App</h4>
+      <ul className="nav flex-column gap-2" role="navigation">
+        {navItems.map((item, index) => (
+          item.children ? ( // If the item has children, render it as a dropdown
+            <li key={index} className={`nav-item ${isAnalyticsPathActive ? 'bg-secondary rounded' : ''}`}>
+              <div
+                className="nav-link text-white d-flex align-items-center justify-content-between"
+                onClick={() => setOpenAnalytics(!openAnalytics)}
+                style={{ cursor: 'pointer' }}
+                aria-expanded={openAnalytics} // ARIA attribute for expand/collapse state
+              >
+                <div className="d-flex align-items-center gap-2">
+                  {item.icon} {item.label}
+                </div>
+                {openAnalytics ? <FaChevronUp className="ms-auto" /> : <FaChevronDown className="ms-auto" />}
+              </div>
+              {openAnalytics && ( // Conditionally render children if dropdown is open
+                <ul className="nav flex-column ps-4 pt-1 pb-1" style={{ listStyle: 'none' }}>
+                  {item.children.map(child => (
+                    <li key={child.path} className={`nav-item ${location.pathname === child.path ? 'bg-secondary rounded' : ''}`}>
+                      <Link
+                        to={child.path}
+                        className="nav-link text-white d-flex align-items-center gap-2 py-1"
+                        aria-current={location.pathname === child.path ? 'page' : undefined}
+                      >
+                        {child.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ) : ( // If no children, render as a regular link
+            <li key={item.path} className={`nav-item ${location.pathname === item.path ? 'bg-secondary rounded' : ''}`}>
+              <Link
+                to={item.path}
+                className="nav-link text-white d-flex align-items-center gap-2"
+                aria-current={location.pathname === item.path ? 'page' : undefined}
+              >
+                {item.icon} {item.label}
+              </Link>
+            </li>
+          )
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+export default Sidebar;
