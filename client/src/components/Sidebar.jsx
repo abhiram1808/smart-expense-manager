@@ -18,7 +18,7 @@ const Sidebar = () => {
   const [openAnalytics, setOpenAnalytics] = useState(false);
 
   // Check if current path is within analytics sub-paths to keep it open
-  const isAnalyticsPathActive = location.pathname === '/analytics' || location.pathname === '/budget-analytics' || location.pathname === '/common-expense-analytics';
+  const isAnalyticsPathActive = location.pathname === '/analytics' || location.pathname === '/budget-analytics' || location.pathname === '/common-expense-analytics' || location.pathname === '/expense-analytics'; // NEW: Add expense-analytics
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <FaTachometerAlt /> },
@@ -29,7 +29,8 @@ const Sidebar = () => {
       children: [
         { path: '/analytics', label: 'Income & Expense Analytics' },
         { path: '/budget-analytics', label: 'Budget Analytics' },
-        { path: '/common-expense-analytics', label: 'Recurring Expense Analytics' }
+        { path: '/common-expense-analytics', label: 'Recurring Expense Analytics' },
+        { path: '/expense-analytics', label: 'Expense Analytics' } // NEW: Link to new page
       ]
     },
     { path: '/monthly-income', label: 'Income', icon: <FaMoneyBillWave /> },
@@ -49,24 +50,23 @@ const Sidebar = () => {
   return (
     <div className="sidebar bg-dark text-white p-3" style={{ minWidth: '220px', height: '100vh', overflowY: 'auto' }}>
       <h4 className="mb-4">💼 Expense App</h4>
-      <ul className="nav flex-column gap-2" role="navigation"> {/* Use role="navigation" on the main ul if it's the primary nav */}
+      <ul className="nav flex-column gap-2" role="navigation">
         {navItems.map((item, index) => (
-          item.children ? ( // If the item has children, render it as a dropdown
+          item.children ? (
             <li key={index} className={`nav-item ${isAnalyticsPathActive ? 'bg-secondary rounded' : ''}`}>
-              {/* Use a button for the toggle, with aria-controls and aria-expanded */}
               <button
-                className="nav-link text-white d-flex align-items-center justify-content-between w-100" // w-100 to make button fill space
+                className="nav-link text-white d-flex align-items-center justify-content-between w-100"
                 onClick={() => setOpenAnalytics(!openAnalytics)}
                 aria-expanded={openAnalytics}
-                aria-controls={`analytics-submenu-${index}`} // Link to the submenu's ID
-                style={{ cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left' }} // Reset button default styles
+                aria-controls={`analytics-submenu-${index}`}
+                style={{ cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left' }}
               >
                 <div className="d-flex align-items-center gap-2">
                   {item.icon} {item.label}
                 </div>
                 {openAnalytics ? <FaChevronUp className="ms-auto" /> : <FaChevronDown className="ms-auto" />}
               </button>
-              {openAnalytics && ( // Conditionally render children if dropdown is open
+              {openAnalytics && (
                 <ul id={`analytics-submenu-${index}`} className="nav flex-column ps-4 pt-1 pb-1" style={{ listStyle: 'none' }}>
                   {item.children.map(child => (
                     <li key={child.path} className={`nav-item ${location.pathname === child.path ? 'bg-secondary rounded' : ''}`}>
@@ -82,7 +82,7 @@ const Sidebar = () => {
                 </ul>
               )}
             </li>
-          ) : ( // If no children, render as a regular link
+          ) : (
             <li key={item.path} className={`nav-item ${location.pathname === item.path ? 'bg-secondary rounded' : ''}`}>
               <Link
                 to={item.path}
