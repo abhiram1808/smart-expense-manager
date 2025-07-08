@@ -6,7 +6,7 @@ import ExpenseList from '../components/Expense/ExpenseList';
 import ActionModal from '../components/common/ActionModal';
 import ErrorDisplay from '../components/common/ErrorDisplay';
 import SkeletonLoader from '../components/common/SkeletonLoader';
-import { toast } from 'react-toastify';
+//import { toast } from 'react-toastify';
 
 /**
  * Component for filtering and sorting expenses.
@@ -226,6 +226,7 @@ const ExpenseListPage = () => {
       try {
         await deleteExpenseItem(expenseToDeleteId);
       } catch (error) {
+        console.error('ExpenseListPage: Error occurred while deleting expense:', error);
         // Error toast is handled by useExpenses hook
       } finally {
         setShowDeleteModal(false);
