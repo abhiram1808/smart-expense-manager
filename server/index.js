@@ -15,12 +15,12 @@ import commonExpenseRoutes from './routes/commonExpenseRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import alertRoutes from './routes/alertRoutes.js';
 
-// Import your auto-insert utility
-import { autoInsertCommonExpenses } from './utils/autoInsertCommonExpenses.js';
+import { autoInsertCommonExpenses } from './utils/autoInsertCommonExpenses.js'; // <--- THIS MUST MATCH THE NAMED EXPORT
 
-// ⏰ Runs at 1:00 AM on the 1st of every month
-cron.schedule('0 1 1 * *', async () => {
-    console.log('🔁 Auto-inserting recurring expenses...');
+// ⏰ Cron job to run autoInsertCommonExpenses daily at 1:00 AM
+// This schedule ('0 1 * * *') means: at minute 0, hour 1, every day of the month, every month, every day of the week.
+cron.schedule('0 1 * * *', async () => { // <--- CRON SCHEDULE UPDATED TO DAILY
+    console.log('🔁 Running daily common expenses auto-insertion job...');
     await autoInsertCommonExpenses();
 });
 
@@ -54,12 +54,12 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/income', incomeRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/common-expenses', commonExpenseRoutes);
+app.use('/api/common-expenses', commonExpenseRoutes); // Common Expenses routes are correctly mounted
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/alerts', alertRoutes);
 
 // --- Database Connection and Server Start ---
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI) // <--- DEPRECATED OPTIONS REMOVED
     .then(() => {
         app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     })

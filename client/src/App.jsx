@@ -7,6 +7,9 @@ import AddExpensePage from './pages/AddExpensePage';
 import ExpenseListPage from './pages/ExpenseListPage';
 import AnalyticsPage from './pages/AnalyticsPage'; // Your existing income/overview analytics page
 
+// NEW: Import the CommonExpenseAnalyticsPage
+import CommonExpenseAnalyticsPage from './pages/CommonExpenseAnalyticsPage';
+
 // Correctly import your pages
 import MonthlyIncomePage from './pages/MonthlyIncomePage';
 import MonthlyBudgetPage from './pages/MonthlyBudgetPage';
@@ -43,6 +46,8 @@ const App = () => {
 
             {/* NEW: Route for Budget Analytics Page */}
             <Route path="/budget-analytics" element={<BudgetAnalyticsPage />} />
+            {/* NEW: Route for Common Expense Analytics Page */}
+            <Route path="/common-expense-analytics" element={<CommonExpenseAnalyticsPage />} />
 
             {/* Redirects */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

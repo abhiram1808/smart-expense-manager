@@ -1,25 +1,25 @@
 // src/components/Sidebar.jsx
-import React, { useState } from 'react'; // Import useState for managing dropdown state
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   FaTachometerAlt,
   FaPlus,
   FaList,
-  FaChartPie, // Used for the parent Analytics icon
+  FaChartPie,
   FaMoneyBillWave,
   FaPiggyBank,
   FaCog,
   FaUserShield,
-  FaChevronDown, // New icon for dropdown indication
-  FaChevronUp // New icon for dropdown indication
+  FaChevronDown,
+  FaChevronUp
 } from 'react-icons/fa';
 
 const Sidebar = () => {
   const location = useLocation();
-  const [openAnalytics, setOpenAnalytics] = useState(false); // State to manage Analytics dropdown
+  const [openAnalytics, setOpenAnalytics] = useState(false);
 
   // Check if current path is within analytics sub-paths to keep it open
-  const isAnalyticsPathActive = location.pathname === '/analytics' || location.pathname === '/budget-analytics';
+  const isAnalyticsPathActive = location.pathname === '/analytics' || location.pathname === '/budget-analytics' || location.pathname === '/common-expense-analytics'; // NEW: Add common-expense-analytics
 
   // Define navigation items, now supporting nested items for Analytics
   const navItems = [
@@ -30,13 +30,14 @@ const Sidebar = () => {
       label: 'Analytics', // Parent item for Analytics
       icon: <FaChartPie />,
       children: [
-        { path: '/analytics', label: 'Income Analytics' }, // Original Analytics page
-        { path: '/budget-analytics', label: 'Budget Analytics' } // New Budget Analytics page
+        { path: '/analytics', label: 'Income & Expense Analytics' }, // Renamed for clarity
+        { path: '/budget-analytics', label: 'Budget Analytics' },
+        { path: '/common-expense-analytics', label: 'Recurring Expense Analytics' } // NEW: Link to new page
       ]
     },
     { path: '/monthly-income', label: 'Income', icon: <FaMoneyBillWave /> },
     { path: '/monthly-budget', label: 'Budget', icon: <FaPiggyBank /> },
-    { path: '/common-expenses', label: 'Common Expenses', icon: <FaCog /> },
+    { path: '/common-expenses', label: 'Recurring Expenses', icon: <FaCog /> }, // Renamed for clarity
     { path: '/admin', label: 'Admin', icon: <FaUserShield /> }
   ];
 
@@ -59,7 +60,7 @@ const Sidebar = () => {
                 className="nav-link text-white d-flex align-items-center justify-content-between"
                 onClick={() => setOpenAnalytics(!openAnalytics)}
                 style={{ cursor: 'pointer' }}
-                aria-expanded={openAnalytics} // ARIA attribute for expand/collapse state
+                aria-expanded={openAnalytics}
               >
                 <div className="d-flex align-items-center gap-2">
                   {item.icon} {item.label}
