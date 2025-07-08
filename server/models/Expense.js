@@ -22,16 +22,16 @@ const expenseSchema = mongoose.Schema(
             trim: true,
             default: '', // Description can be optional
         },
-        // For easier querying and analytics by month/year without date parsing
+        // --- CRITICAL FIX: Remove 'required: true' from month and year ---
         month: {
             type: Number, // 1-12
             min: [1, 'Month must be between 1 and 12'],
             max: [12, 'Month must be between 1 and 12'],
-            required: true,
+            // required: true, // REMOVED
         },
         year: {
             type: Number,
-            required: true,
+            // required: true, // REMOVED
         },
         // If you implement user authentication later, you'd add:
         // user: {

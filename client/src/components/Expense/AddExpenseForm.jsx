@@ -1,19 +1,20 @@
-// src/components/Budget/AddBudgetForm.jsx
+// src/components/Expenses/AddExpenseForm.jsx
 import React, { useState } from 'react';
-import CategoryDropdown from '../Shared/CategoryDropdown'; // Import your reusable CategoryDropdown
-import { toast } from 'react-toastify'; // <--- Import toast
+import { toast } from 'react-toastify';
+import CategoryDropdown from '../Shared/CategoryDropdown'; // Reusing the CategoryDropdown
 
 /**
- * Form component for adding new budget records.
- * It takes an 'onAddBudget' prop which is a function to handle the actual addition.
- * It now uses a reusable CategoryDropdown component and React Toastify for validation messages.
+ * Form component for adding new expense records.
+ * @param {object} props - Component props.
+ * @param {Function} props.onAddExpense - Callback function to handle the form submission.
+ * @param {boolean} props.disabled - Boolean to disable the form during submission/loading.
  */
-const AddBudgetForm = ({ onAddBudget, disabled }) => {
+const AddExpenseForm = ({ onAddExpense, disabled }) => {
   const [formData, setFormData] = useState({
-    category: '', // This will hold the selected category name
+    category: '',
     amount: '',
-    month: new Date().getMonth() + 1, // Default to current month (1-indexed)
-    year: new Date().getFullYear(),   // Default to current year
+    date: new Date().toISOString().split('T')[0], // Default to today's date in YYYY-MM-DD format
+    description: '',
   });
 
   const handleChange = (e) => {
@@ -26,60 +27,53 @@ const AddBudgetForm = ({ onAddBudget, disabled }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Client-side validation using toast
-    if (!formData.category) {
-      toast.error('Please select a category.');
-      return;
-    }
-    if (!formData.amount) {
-      toast.error('Please enter an amount.');
-      return;
-    }
-    if (!formData.month || !formData.year) {
-      toast.error('Month and Year are required.');
-      return;
-    }
 
+    // Client-side validation
+    if (!formData.category) {
+      toast.error('Please select an expense category.');
+      return;
+    }
     const parsedAmount = parseFloat(formData.amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       toast.error('Amount must be a positive number.');
       return;
     }
+    if (!formData.date) {
+      toast.error('Please select an expense date.');
+      return;
+    }
+    // No need to parse date here, send the string as is.
+    // The backend or hook will handle Date object conversion.
 
     try {
-      await onAddBudget({
+      await onAddExpense({
         ...formData,
-        amount: parsedAmount,
-        month: parseInt(formData.month),
-        year: parseInt(formData.year),
+        amount: parsedAmount, // Ensure amount is a number
+        // date is already a YYYY-MM-DD string from the input, pass it directly
       });
       // Reset form after successful submission
       setFormData({
-        category: '', // Reset category
+        category: '',
         amount: '',
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear(),
+        date: new Date().toISOString().split('T')[0],
+        description: '',
       });
     } catch (error) {
-      // Error handling (toast) for backend errors is done in the useBudget hook
-      console.error("Error submitting add budget form:", error);
+      // Error toast is handled by the useExpenses hook
+      console.error("Error submitting add expense form:", error);
     }
   };
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i); // Current year +/- 2
 
   return (
     <div className="card shadow-sm mb-4" style={{ borderRadius: '12px' }}>
       <div className="card-header bg-primary text-white" style={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}>
-        <h5 className="mb-0">Set New Budget</h5>
+        <h5 className="mb-0">Add New Expense</h5>
       </div>
       <div className="card-body">
         <form onSubmit={handleSubmit}>
           <div className="row g-3">
-            <div className="col-md-3">
+            <div className="col-md-4">
               <label htmlFor="category" className="form-label">Category</label>
-              {/* Using the reusable CategoryDropdown component */}
               <CategoryDropdown
                 id="category"
                 name="category"
@@ -89,7 +83,7 @@ const AddBudgetForm = ({ onAddBudget, disabled }) => {
                 disabled={disabled}
               />
             </div>
-            <div className="col-md-3">
+            <div className="col-md-4">
               <label htmlFor="amount" className="form-label">Amount (₹)</label>
               <input
                 type="number"
@@ -99,46 +93,36 @@ const AddBudgetForm = ({ onAddBudget, disabled }) => {
                 value={formData.amount}
                 onChange={handleChange}
                 step="0.01"
-                placeholder="e.g., 5000.00"
+                placeholder="e.g., 500.00"
                 required
                 disabled={disabled}
               />
             </div>
-            <div className="col-md-3">
-              <label htmlFor="month" className="form-label">Month</label>
-              <select
-                className="form-select"
-                id="month"
-                name="month"
-                value={formData.month}
+            <div className="col-md-4">
+              <label htmlFor="date" className="form-label">Date</label>
+              <input
+                type="date"
+                className="form-control"
+                id="date"
+                name="date"
+                value={formData.date}
                 onChange={handleChange}
                 required
                 disabled={disabled}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(currentYear, m - 1, 1).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-            <div className="col-md-3">
-              <label htmlFor="year" className="form-label">Year</label>
-              <select
-                className="form-select"
-                id="year"
-                name="year"
-                value={formData.year}
+            <div className="col-md-12">
+              <label htmlFor="description" className="form-label">Description (Optional)</label>
+              <textarea
+                className="form-control"
+                id="description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                required
+                rows="2"
+                placeholder="e.g., Groceries from SuperMart"
                 disabled={disabled}
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
+              ></textarea>
             </div>
             <div className="col-12 text-end">
               <button type="submit" className="btn btn-primary" disabled={disabled}>
@@ -148,7 +132,7 @@ const AddBudgetForm = ({ onAddBudget, disabled }) => {
                     Adding...
                   </>
                 ) : (
-                  'Set Budget'
+                  'Add Expense'
                 )}
               </button>
             </div>
@@ -159,4 +143,4 @@ const AddBudgetForm = ({ onAddBudget, disabled }) => {
   );
 };
 
-export default AddBudgetForm;
+export default AddExpenseForm;

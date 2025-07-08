@@ -2,26 +2,23 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Sidebar from './components/Sidebar'; // Your existing Sidebar component
-import AddExpensePage from './pages/AddExpensePage';
-import ExpenseListPage from './pages/ExpenseListPage';
-import AnalyticsPage from './pages/AnalyticsPage'; // Your existing income/overview analytics page
+import Sidebar from './components/Sidebar';
+import AddExpensePage from './pages/AddExpensePage'; // REMOVED
+import ExpenseListPage from './pages/ExpenseListPage'; // This is now the consolidated page
+import AnalyticsPage from './pages/AnalyticsPage';
 
-// NEW: Import the CommonExpenseAnalyticsPage
-import CommonExpenseAnalyticsPage from './pages/CommonExpenseAnalyticsPage';
-
-// Correctly import your pages
 import MonthlyIncomePage from './pages/MonthlyIncomePage';
 import MonthlyBudgetPage from './pages/MonthlyBudgetPage';
 import CommonExpensesPage from './pages/CommonExpensesPage';
 import AdminPage from './pages/AdminPage';
 import DashboardPage from './pages/DashboardPage';
-import BudgetAnalyticsPage from './pages/BudgetAnalyticsPage'; // <--- NEW: Import the Budget Analytics Page
+import BudgetAnalyticsPage from './pages/BudgetAnalyticsPage';
+import CommonExpenseAnalyticsPage from './pages/CommonExpenseAnalyticsPage';
 
 import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Ensure Toastify CSS is imported
-import 'bootstrap/dist/css/bootstrap.min.css'; // Assuming Bootstrap CSS is used
-//import 'animate.css/animate.min.css'; // Assuming Animate.css is used for animations
+import 'react-toastify/dist/ReactToastify.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+// import 'animate.css/animate.min.css';
 
 
 const App = () => {
@@ -38,15 +35,12 @@ const App = () => {
             <Route path="/monthly-income" element={<MonthlyIncomePage />} />
             <Route path="/monthly-budget" element={<MonthlyBudgetPage />} />
             <Route path="/common-expenses" element={<CommonExpensesPage />} />
-            <Route path="/add-expense" element={<AddExpensePage />} />
+            {/* <Route path="/add-expense" element={<AddExpensePage />} /> */}
             <Route path="/expenses" element={<ExpenseListPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} /> {/* Your existing income/overview analytics */}
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-
-            {/* NEW: Route for Budget Analytics Page */}
             <Route path="/budget-analytics" element={<BudgetAnalyticsPage />} />
-            {/* NEW: Route for Common Expense Analytics Page */}
             <Route path="/common-expense-analytics" element={<CommonExpenseAnalyticsPage />} />
 
             {/* Redirects */}

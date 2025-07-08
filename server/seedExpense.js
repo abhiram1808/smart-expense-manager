@@ -1,125 +1,101 @@
-// backend/seed.js (Refined Version)
+// backend/seedExpense.js
 import mongoose from 'mongoose';
-
-import Expense from './models/Expense.js'; // Adjust path if your models folder is elsewhere
-
-
-// Script to seed one year of income data for analytics and summarization
-
+import Expense from './models/Expense.js'; // Ensure this path points to your Expense model
 import 'dotenv/config'; // Automatically loads environment variables from .env file
-
 
 // Replace with your actual MongoDB connection string
 const MONGO_URI = process.env.MONGO_URI;
+const DB_NAME = 'expenseDB'; // Your database name, ensure it matches your index.js
 
-// --- Configuration ---
-const SEED_START_YEAR = 2024; // Start seeding from this year
-const SEED_END_YEAR = new Date().getFullYear(); // Seed up to the current year
-const CURRENT_MONTH = new Date().getMonth() + 1; // Current month (1-indexed)
-const CURRENT_DAY = new Date().getDate(); // Current day of the month
-
-// --- Sample Data Templates ---
-const commonExpensesTemplates = [
-    { category: 'Rent', amount: 15000, isRecurring: true, dayOfMonth: 1 },
-    { category: 'Internet Bill', amount: 800, isRecurring: true, dayOfMonth: 5 },
-    { category: 'Electricity Bill', amount: 1200, isRecurring: true, dayOfMonth: 10 },
-    { category: 'Netflix Subscription', amount: 499, isRecurring: true, dayOfMonth: 15 },
-    { category: 'Gym Membership', amount: 1000, isRecurring: true, dayOfMonth: 20 },
-    { category: 'Phone Bill', amount: 650, isRecurring: true, dayOfMonth: 25 },
+// Define common expense categories (can be synced with your Category model if you have one)
+const expenseCategories = [
+    'Groceries', 'Rent', 'Utilities', 'Transport', 'Dining Out',
+    'Entertainment', 'Shopping', 'Health', 'Education', 'Loan Payment',
+    'Subscription', 'Insurance', 'Personal Care', 'Travel', 'Other'
 ];
 
-const categoriesForRandomExpenses = [
-    'Groceries', 'Dining Out', 'Transport', 'Shopping', 'Entertainment', 'Healthcare',
-    'Education', 'Travel', 'Hobbies', 'Personal Care', 'Home Maintenance'
-];
+// Helper to get a random element from an array
+const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-// --- Helper Functions ---
+// Helper to get a random amount within a range
 const getRandomAmount = (min, max) => parseFloat((Math.random() * (max - min) + min).toFixed(2));
-const getRandomCategory = () => categoriesForRandomExpenses[Math.floor(Math.random() * categoriesForRandomExpenses.length)];
 
-/**
- * Seeds the database with expense data.
- * It clears existing expenses first and generates data based on current date.
- */
-const seedExpenses = async () => {
+// Generate dummy expense data
+const dummyExpenses = [];
+const numExpensesToGenerate = 100; // Generate 100 random expenses
+
+for (let i = 0; i < numExpensesToGenerate; i++) {
+    const randomCategory = getRandomElement(expenseCategories);
+    const randomAmount = getRandomAmount(50, 5000); // Amounts between 50 and 5000
+
+    // Generate a random date within the last 12 months
+    const today = new Date();
+    const randomDaysAgo = Math.floor(Math.random() * 365); // Up to 1 year ago
+    const randomDate = new Date(today);
+    randomDate.setDate(today.getDate() - randomDaysAgo);
+
+    // --- CRITICAL FIX: Explicitly calculate month and year ---
+    const expenseMonth = randomDate.getMonth() + 1; // getMonth() is 0-indexed
+    const expenseYear = randomDate.getFullYear();
+    // --- END CRITICAL FIX ---
+
+    const descriptions = [
+        `Purchased ${randomCategory} items`,
+        `Paid for ${randomCategory}`,
+        `Monthly ${randomCategory} expense`,
+        `Miscellaneous ${randomCategory} cost`,
+        `Bill for ${randomCategory} service`
+    ];
+    const randomDescription = getRandomElement(descriptions);
+
+    dummyExpenses.push({
+        category: randomCategory,
+        amount: randomAmount,
+        date: randomDate,
+        description: randomDescription,
+        month: expenseMonth, // <--- ADDED
+        year: expenseYear,   // <--- ADDED
+        createdAt: new Date(randomDate.getTime() + Math.random() * 86400000) // Slightly vary createdAt
+    });
+}
+
+async function seedExpenses() {
     try {
         await mongoose.connect(MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            
+            dbName: DB_NAME // Specify the database name
         });
-        console.log('✅ MongoDB Connected for seeding!');
+        console.log('✅ MongoDB Connected for expense seeding!');
 
-        // Clear existing expenses for a clean slate
+        // Clear existing expenses for a clean slate (optional, but good for testing)
         console.log('🗑️ Clearing existing expense data...');
         await Expense.deleteMany({});
         console.log('🗑️ Existing expense data cleared.');
 
-        const expensesToInsert = [];
-
-        for (let year = SEED_START_YEAR; year <= SEED_END_YEAR; year++) {
-            const startMonth = 1;
-            const endMonth = (year === SEED_END_YEAR) ? CURRENT_MONTH : 12;
-
-            for (let monthNum = startMonth; monthNum <= endMonth; monthNum++) {
-                // Determine the last day to seed for the current month in the current year
-                const lastDayOfMonth = (year === SEED_END_YEAR && monthNum === CURRENT_MONTH) ? CURRENT_DAY : new Date(year, monthNum, 0).getDate();
-
-                // 1. Insert Common (Recurring) Expenses
-                for (const template of commonExpensesTemplates) {
-                    // Only insert if the day of month for recurring expense is not in the future for current month
-                    if (year === SEED_END_YEAR && monthNum === CURRENT_MONTH && template.dayOfMonth > CURRENT_DAY) {
-                        continue; // Skip if recurring expense day is in the future for the current month
-                    }
-                    const date = new Date(year, monthNum - 1, template.dayOfMonth); // monthNum - 1 because Date months are 0-indexed
-                    expensesToInsert.push({
-                        category: template.category,
-                        amount: template.amount,
-                        date: date,
-                        isRecurring: template.isRecurring,
-                        year: year,
-                        month: monthNum,
-                        createdAt: date // Using the expense date for createdAt for seeding consistency
-                    });
-                }
-
-                // 2. Insert Random Non-Recurring Expenses
-                const numRandomExpenses = Math.floor(Math.random() * 3) + 2; // 2-4 random expenses per month
-                for (let i = 0; i < numRandomExpenses; i++) {
-                    let randomDay = Math.floor(Math.random() * lastDayOfMonth) + 1; // Random day within valid range for the month
-                    const date = new Date(year, monthNum - 1, randomDay);
-
-                    expensesToInsert.push({
-                        category: getRandomCategory(),
-                        amount: getRandomAmount(50, 5000),
-                        date: date,
-                        isRecurring: false,
-                        year: year,
-                        month: monthNum,
-                        createdAt: date
-                    });
-                }
-            }
-        }
-
-        console.log(`Inserting ${expensesToInsert.length} expense records...`);
-        await Expense.insertMany(expensesToInsert);
+        console.log(`Inserting ${dummyExpenses.length} expense records...`);
+        await Expense.insertMany(dummyExpenses);
         console.log('🎉 Expense data seeded successfully!');
 
     } catch (error) {
         console.error('❌ Error seeding expense data:', error);
+        if (error.name === 'ValidationError') {
+            for (let field in error.errors) {
+                console.error(`Validation Error for field '${field}': ${error.errors[field].message}`);
+            }
+        } else if (error.code === 11000) {
+            console.error('Duplicate key error:', error.message);
+        }
     } finally {
         await mongoose.disconnect();
         console.log('🔌 MongoDB Disconnected.');
     }
-};
+}
 
 // --- Execute the seeding function ---
 seedExpenses()
-    .then(() => console.log('Seeding process finished.'))
-    .catch(err => console.error('Seeding process failed:', err));
+    .then(() => console.log('Expense seeding process finished.'))
+    .catch(err => console.error('Expense seeding process failed:', err));
 
 // To run this script:
-// 1. Make sure your backend server (index.js) is NOT running (to avoid conflicts with DB connection).
-// 2. Open a terminal, navigate to your backend directory.
-// 3. Type: node seed.js
+// 1. Make sure your backend server (index.js) is NOT running.
+// 2. Open a terminal, navigate to your backend directory (e.g., F:/smart-expense-manager/server).
+// 3. Type: node seedExpense.js
