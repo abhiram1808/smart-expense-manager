@@ -14,8 +14,8 @@ const expenseSchema = mongoose.Schema(
             min: [0, 'Amount cannot be negative'],
         },
         date: {
-            type: Date,
-            required: [true, 'Expense date is required'],
+            type: String, // Should be 'YYYY-MM-DD'
+            required: true,
         },
         description: {
             type: String,

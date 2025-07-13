@@ -16,7 +16,6 @@ const setNoCacheHeaders = (res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    // Crucial: Remove ETag and Last-Modified headers to prevent 304s
     res.removeHeader('ETag');
     res.removeHeader('Last-Modified');
 };
@@ -50,7 +49,7 @@ export const createExpense = async (req, res) => {
         });
 
         console.log('ExpenseController: Expense created:', newExpense);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(201).json(newExpense);
     } catch (err) {
         handleControllerError(res, err, 'Failed to create expense');
@@ -77,22 +76,28 @@ export const getExpenses = async (req, res) => {
         if (year) {
             query.year = Number(year);
         }
+        // Date range filtering
         if (startDate || endDate) {
             query.date = {};
             if (startDate) {
-                const start = new Date(startDate);
+                // Parse as UTC date to avoid local timezone offset issues
+                const start = new Date(startDate + 'T00:00:00.000Z'); // Treat YYYY-MM-DD as UTC midnight
                 if (isNaN(start.getTime())) {
+                    console.error('Backend: Invalid startDate received for parsing:', startDate);
                     return res.status(400).json({ error: 'Invalid startDate format.' });
                 }
                 query.date.$gte = start;
+                console.log('Backend: Parsed startDate (UTC):', start.toISOString(), ' (original:', startDate, ')');
             }
             if (endDate) {
-                const end = new Date(endDate);
+                // Parse as UTC date and set to end of day to include all of that day
+                const end = new Date(endDate + 'T23:59:59.999Z'); // Treat YYYY-MM-DD as UTC end of day
                 if (isNaN(end.getTime())) {
+                    console.error('Backend: Invalid endDate received for parsing:', endDate);
                     return res.status(400).json({ error: 'Invalid endDate format.' });
                 }
-                end.setHours(23, 59, 59, 999);
                 query.date.$lte = end;
+                console.log('Backend: Parsed endDate (UTC, inclusive):', end.toISOString(), ' (original:', endDate, ')');
             }
         }
 
@@ -105,10 +110,13 @@ export const getExpenses = async (req, res) => {
             sortOptions.date = -1;
         }
 
+        console.log('Backend: Final Mongoose query object:', JSON.stringify(query));
+        console.log('Backend: Final Mongoose sort options:', JSON.stringify(sortOptions));
+
         const expenses = await Expense.find(query).sort(sortOptions);
 
         console.log('ExpenseController: Fetched expenses count:', expenses.length);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(expenses);
     } catch (err) {
         handleControllerError(res, err, 'Failed to fetch expenses');
@@ -129,7 +137,7 @@ export const getExpenseById = async (req, res) => {
             return res.status(404).json({ error: 'Expense not found' });
         }
 
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(expense);
     } catch (err) {
         handleControllerError(res, err, 'Failed to fetch expense by ID');
@@ -172,7 +180,7 @@ export const updateExpense = async (req, res) => {
 
         const updatedExpense = await expense.save();
         console.log('ExpenseController: Expense updated:', updatedExpense);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(updatedExpense);
     } catch (err) {
         handleControllerError(res, err, 'Failed to update expense');
@@ -195,7 +203,7 @@ export const deleteExpense = async (req, res) => {
 
         await Expense.deleteOne({ _id: req.params.id });
         console.log('ExpenseController: Expense deleted:', req.params.id);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json({ message: 'Expense removed successfully' });
     } catch (err) {
         handleControllerError(res, err, 'Failed to delete expense');
@@ -216,14 +224,13 @@ export const getExpenseSummaryByCategory = async (req, res) => {
         if (startDate || endDate) {
             matchQuery.date = {};
             if (startDate) {
-                const start = new Date(startDate);
+                const start = new Date(startDate + 'T00:00:00.000Z');
                 if (isNaN(start.getTime())) return res.status(400).json({ error: 'Invalid startDate format.' });
                 matchQuery.date.$gte = start;
             }
             if (endDate) {
-                const end = new Date(endDate);
+                const end = new Date(endDate + 'T23:59:59.999Z');
                 if (isNaN(end.getTime())) return res.status(400).json({ error: 'Invalid endDate format.' });
-                end.setHours(23, 59, 59, 999);
                 matchQuery.date.$lte = end;
             }
         }
@@ -234,7 +241,7 @@ export const getExpenseSummaryByCategory = async (req, res) => {
             { $project: { category: '$_id', totalAmount: 1, count: 1, _id: 0 } },
             { $sort: { totalAmount: -1 } }
         ]);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(summary);
     } catch (err) {
         handleControllerError(res, err, 'Failed to get expense summary by category');
@@ -255,7 +262,7 @@ export const getMonthlyExpenseSummary = async (req, res) => {
             { $project: { month: '$_id', totalAmount: 1, count: 1, _id: 0 } },
             { $sort: { month: 1 } }
         ]);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(summary);
     } catch (err) {
         handleControllerError(res, err, 'Failed to get monthly expense summary');
@@ -270,7 +277,7 @@ export const getYearlyExpenseSummary = async (req, res) => {
             { $project: { year: '$_id', totalAmount: 1, count: 1, _id: 0 } },
             { $sort: { year: 1 } }
         ]);
-        setNoCacheHeaders(res); // Apply no-cache headers
+        setNoCacheHeaders(res);
         res.status(200).json(summary);
     } catch (err) {
         handleControllerError(res, err, 'Failed to get yearly expense summary');
