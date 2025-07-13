@@ -1,276 +1,251 @@
-// backend/controllers/commonExpenseController.js
+// server/controllers/commonExpenseController.js
 import CommonExpense from '../models/CommonExpense.js';
-import {
-    getCommonExpenses as getCommonExpensesUtil,
-    getCommonExpenseSummaryByCategory,
-    getCommonExpenseSummaryByDayOfMonth,
-    getTotalActiveCommonExpensesAmount
-} from '../utils/commonExpenseAggregations.js';
-import { autoInsertCommonExpenses } from '../utils/autoInsertCommonExpenses.js';
+import Expense from '../models/Expense.js';
+import moment from 'moment';
 
-// Helper for consistent error handling in controllers
-const handleControllerError = (res, err, message = 'Server error') => {
-    console.error(`❌ ${message}:`, err);
-    // Handle Mongoose validation errors specifically
-    if (err.name === 'ValidationError') {
-        const errors = Object.values(err.errors).map(el => el.message);
-        return res.status(400).json({ error: 'Validation failed', details: errors.join(', ') });
-    }
-    // Handle custom error from schema pre-save hook
-    if (err.message === 'End date cannot be before start date.') {
-        return res.status(400).json({ error: err.message });
-    }
-    res.status(500).json({ error: message, details: err.message });
+// @desc    Create a new common expense template (recurring expense)
+// @route   POST /api/common-expenses
+// @access  Public (add auth later if needed)
+export const createCommonExpense = async (req, res) => {
+  try {
+    const { name, category, amount, dayOfMonth, startDate, termMonths, endDate, isActive } = req.body;
+
+    const newCommonExpense = new CommonExpense({
+      name,
+      category,
+      amount,
+      dayOfMonth,
+      startDate: new Date(startDate),
+      termMonths: termMonths || null,
+      endDate: endDate ? new Date(endDate) : null,
+      isActive: isActive !== undefined ? isActive : true,
+      // user: req.user.id, // Uncomment if user is mandatory
+    });
+
+    const savedCommonExpense = await newCommonExpense.save();
+    res.status(201).json(savedCommonExpense);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
-/**
- * @route POST /api/common-expenses
- * @desc Create a new common expense
- * @access Public (or Private/Auth)
- */
+// @desc    Get all common expense templates
+// @route   GET /api/common-expenses
+// @access  Public
+export const getCommonExpenses = async (req, res) => {
+  try {
+    console.log('Backend: getCommonExpenses - Attempting to fetch all templates...');
+    // const commonExpenses = await CommonExpense.find({ user: req.user.id }); // Uncomment if user is mandatory
+    const commonExpenses = await CommonExpense.find({});
+    console.log('Backend: getCommonExpenses - Fetched templates count:', commonExpenses.length);
+    res.status(200).json(commonExpenses);
+  } catch (err) {
+    console.error('Backend: getCommonExpenses - Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
 
-export const createCommonExpense = async (req, res) => {
-    console.log('CommonExpenseController: createCommonExpense - Request body:', req.body);
-    try {
-        const { name, category, amount, dayOfMonth, startDate, endDate, termMonths, isActive } = req.body; // NEW: termMonths
+// @desc    Update a common expense template
+// @route   PUT /api/common-expenses/:id
+// @access  Public
+export const updateCommonExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
 
-        // Basic validation for required fields
-        if (!name || !category || !amount || !dayOfMonth || !startDate) {
-            return res.status(400).json({ error: 'Please enter all required fields: name, category, amount, dayOfMonth, startDate.' });
-        }
-        if (isNaN(amount) || amount <= 0) {
-            return res.status(400).json({ error: 'Amount must be a positive number.' });
-        }
-        if (isNaN(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
-            return res.status(400).json({ error: 'Day of month must be a number between 1 and 31.' });
+    const updatedFields = {};
+
+    if (updates.name !== undefined) updatedFields.name = updates.name;
+    if (updates.category !== undefined) updatedFields.category = updates.category;
+    if (updates.amount !== undefined) updatedFields.amount = updates.amount;
+    if (updates.dayOfMonth !== undefined) updatedFields.dayOfMonth = updates.dayOfMonth;
+
+    if (updates.startDate !== undefined) {
+      const date = new Date(updates.startDate);
+      if (!isNaN(date.getTime())) {
+        updatedFields.startDate = date;
+      } else if (updates.startDate === null || updates.startDate === '') {
+        updatedFields.startDate = null;
+      } else {
+        throw new Error('Invalid startDate provided.');
+      }
+    }
+
+    if (updates.endDate !== undefined) {
+      const date = new Date(updates.endDate);
+      if (!isNaN(date.getTime())) {
+        updatedFields.endDate = date;
+      } else if (updates.endDate === null || updates.endDate === '') {
+        updatedFields.endDate = null;
+      } else {
+        throw new Error('Invalid endDate provided.');
+      }
+    }
+
+    if (updates.termMonths !== undefined) {
+        updatedFields.termMonths = updates.termMonths === null ? null : (updates.termMonths || null);
+    }
+
+    if (updates.isActive !== undefined) {
+        updatedFields.isActive = updates.isActive;
+    }
+
+    const updatedCommonExpense = await CommonExpense.findByIdAndUpdate(id, updatedFields, { new: true, runValidators: true });
+    if (!updatedCommonExpense) {
+      return res.status(404).json({ error: 'Common expense template not found' });
+    }
+    res.status(200).json(updatedCommonExpense);
+  } catch (err) {
+    console.error('Backend: updateCommonExpense - Error:', err);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// @desc    Delete a common expense template
+// @route   DELETE /api/common-expenses/:id
+// @access  Public
+export const deleteCommonExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedCommonExpense = await CommonExpense.findByIdAndDelete(id);
+    if (!deletedCommonExpense) {
+      return res.status(404).json({ error: 'Common expense template not found' });
+    }
+    res.status(200).json({ message: 'Common expense template deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// @desc    Generate recurring expenses based on active common expense templates
+// @route   POST /api/common-expenses/generate (for manual trigger)
+// @access  Public (should be restricted in production)
+export const generateRecurringExpenses = async (req, res) => {
+  try {
+    const today = moment().startOf('day');
+    console.log(`Automation: Running generation for date: ${today.format('YYYY-MM-DD')}`);
+
+    const templates = await CommonExpense.find({
+      isActive: true,
+      startDate: { $lte: today.toDate() },
+      $or: [
+        { endDate: { $gte: today.toDate() } },
+        { endDate: null }
+      ]
+    });
+
+    let generatedCount = 0;
+    const generatedExpenses = [];
+
+    for (const template of templates) {
+      const lastInsertedMoment = template.lastInsertedDate ? moment(template.lastInsertedDate).startOf('day') : null;
+      let nextExpectedDate = lastInsertedMoment ? lastInsertedMoment.clone().add(1, 'month') : moment(template.startDate).startOf('day');
+      nextExpectedDate.date(template.dayOfMonth);
+
+      if (lastInsertedMoment && nextExpectedDate.isSameOrBefore(lastInsertedMoment, 'day')) {
+          nextExpectedDate = lastInsertedMoment.clone().add(1, 'month').date(template.dayOfMonth);
+      }
+      nextExpectedDate.date(Math.min(template.dayOfMonth, nextExpectedDate.daysInMonth()));
+
+
+      while (nextExpectedDate.isSameOrBefore(today, 'day')) {
+        if (template.endDate && nextExpectedDate.isAfter(moment(template.endDate).endOf('day'), 'day')) {
+          console.log(`Automation: Template ${template.name} (${template._id}) reached end date. Stopping.`);
+          break;
         }
 
-        const parsedStartDate = new Date(startDate);
-        if (isNaN(parsedStartDate.getTime())) {
-            return res.status(400).json({ error: 'Invalid start date format.' });
-        }
-
-        let parsedEndDate = null;
-        if (endDate) {
-            parsedEndDate = new Date(endDate);
-            if (isNaN(parsedEndDate.getTime())) {
-                return res.status(400).json({ error: 'Invalid end date format.' });
-            }
-        }
-
-        let parsedTermMonths = null;
-        if (termMonths !== undefined && termMonths !== null && termMonths !== '') {
-            parsedTermMonths = parseInt(termMonths);
-            if (isNaN(parsedTermMonths) || parsedTermMonths < 1) {
-                return res.status(400).json({ error: 'Term in months must be a positive number.' });
-            }
-        }
-
-        // If both endDate and termMonths are provided, endDate takes precedence.
-        // The model's pre-save hook will handle deriving endDate from termMonths if endDate is null.
-        const newCommonExpense = await CommonExpense.create({
-            name: name.trim(),
-            category: category.trim(),
-            amount: Number(amount),
-            dayOfMonth: Number(dayOfMonth),
-            startDate: parsedStartDate,
-            endDate: parsedEndDate, // This will be used if provided, otherwise termMonths will calculate in pre-save
-            termMonths: parsedTermMonths, // Store termMonths if provided
-            isActive: typeof isActive === 'boolean' ? isActive : true,
-            // user: req.user.id,
+        const existingExpense = await Expense.findOne({
+          recurringTemplateId: template._id,
+          date: nextExpectedDate.toDate(),
+          // user: template.user
         });
 
-        console.log('CommonExpenseController: Common expense created:', newCommonExpense);
-        res.status(201).json(newCommonExpense);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to create common expense');
-    }
-};
-/**
- * @route GET /api/common-expenses
- * @desc Get all common expenses with optional filters
- * @access Public (or Private/Auth)
- */
-export const getCommonExpenses = async (req, res) => {
-    console.log('CommonExpenseController: getCommonExpenses - Request Query:', req.query);
-    try {
-        const commonExpenses = await getCommonExpensesUtil(req.query); // Use the utility function
-        console.log('CommonExpenseController: Fetched common expenses count:', commonExpenses.length);
-        res.status(200).json(commonExpenses);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to fetch common expenses');
-    }
-};
-
-/**
- * @route GET /api/common-expenses/:id
- * @desc Get a single common expense by ID
- * @access Public (or Private/Auth)
- */
-export const getCommonExpenseById = async (req, res) => {
-    console.log('CommonExpenseController: getCommonExpenseById - Request ID:', req.params.id);
-    try {
-        const commonExpense = await CommonExpense.findById(req.params.id);
-
-        if (!commonExpense) {
-            return res.status(404).json({ error: 'Common expense not found' });
+        if (!existingExpense) {
+          const newExpense = new Expense({
+            description: template.name,
+            amount: template.amount,
+            category: template.category,
+            date: nextExpectedDate.toDate(),
+            month: nextExpectedDate.month() + 1,
+            year: nextExpectedDate.year(),
+            // user: template.user,
+            isRecurring: true,
+            recurringTemplateId: template._id,
+          });
+          const savedExpense = await newExpense.save();
+          generatedExpenses.push(savedExpense);
+          generatedCount++;
+          console.log(`Generated expense for ${template.name} on ${nextExpectedDate.format('YYYY-MM-DD')}`);
+        } else {
+          console.log(`Expense for ${template.name} on ${nextExpectedDate.format('YYYY-MM-DD')} already exists. Skipping.`);
         }
 
-        // if (req.user && commonExpense.user.toString() !== req.user.id) { // Uncomment if you add user authentication
-        //     return res.status(401).json({ error: 'Not authorized to view this common expense' });
-        // }
+        nextExpectedDate.add(1, 'month');
+        nextExpectedDate.date(Math.min(template.dayOfMonth, nextExpectedDate.daysInMonth()));
+      }
 
-        res.status(200).json(commonExpense);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to fetch common expense by ID');
+      if (lastInsertedMoment === null || lastInsertedMoment.isBefore(today, 'day')) {
+        template.lastInsertedDate = today.toDate();
+        await template.save();
+        console.log(`Updated lastInsertedDate for ${template.name} to ${today.format('YYYY-MM-DD')}`);
+      }
     }
+
+    console.log(`Automation: Generated ${generatedCount} new recurring expenses.`);
+    res.status(200).json({ message: `Generated ${generatedCount} new recurring expenses.`, generatedExpenses });
+  } catch (err) {
+    console.error('Automation Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-/**
- * @route PUT /api/common-expenses/:id
- * @desc Update a common expense by ID
- * @access Public (or Private/Auth)
- */
-export const updateCommonExpense = async (req, res) => {
-    console.log('CommonExpenseController: updateCommonExpense - Request ID:', req.params.id, 'Body:', req.body);
-    try {
-        const { name, category, amount, dayOfMonth, startDate, endDate, termMonths, isActive } = req.body; // NEW: termMonths
-
-        const commonExpense = await CommonExpense.findById(req.params.id);
-
-        if (!commonExpense) {
-            return res.status(404).json({ error: 'Common expense not found' });
-        }
-
-        // Update fields if provided
-        if (name) commonExpense.name = name.trim();
-        if (category) commonExpense.category = category.trim();
-        if (amount !== undefined) {
-            if (isNaN(amount) || amount <= 0) {
-                return res.status(400).json({ error: 'Amount must be a positive number.' });
-            }
-            commonExpense.amount = Number(amount);
-        }
-        if (dayOfMonth !== undefined) {
-            if (isNaN(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31) {
-                return res.status(400).json({ error: 'Day of month must be a number between 1 and 31.' });
-            }
-            commonExpense.dayOfMonth = Number(dayOfMonth);
-        }
-        if (startDate !== undefined) {
-            const parsedStartDate = new Date(startDate);
-            if (isNaN(parsedStartDate.getTime())) {
-                return res.status(400).json({ error: 'Invalid start date format.' });
-            }
-            commonExpense.startDate = parsedStartDate;
-        }
-
-        // Handle endDate: If explicitly set to null/empty string, clear it. Otherwise, parse.
-        if (endDate === null || endDate === '') {
-            commonExpense.endDate = null;
-        } else if (endDate !== undefined) {
-            const parsedEndDate = new Date(endDate);
-            if (isNaN(parsedEndDate.getTime())) {
-                return res.status(400).json({ error: 'Invalid end date format.' });
-            }
-            commonExpense.endDate = parsedEndDate;
-        }
-
-        // Handle termMonths: If explicitly set to null/empty string, clear it. Otherwise, parse.
-        if (termMonths === null || termMonths === '') {
-            commonExpense.termMonths = null;
-        } else if (termMonths !== undefined) {
-            const parsedTermMonths = parseInt(termMonths);
-            if (isNaN(parsedTermMonths) || parsedTermMonths < 1) {
-                return res.status(400).json({ error: 'Term in months must be a positive number.' });
-            }
-            commonExpense.termMonths = parsedTermMonths;
-        }
-
-        if (isActive !== undefined) {
-            commonExpense.isActive = typeof isActive === 'boolean' ? isActive : commonExpense.isActive;
-        }
-
-        const updatedCommonExpense = await commonExpense.save();
-        console.log('CommonExpenseController: Common expense updated:', updatedCommonExpense);
-        res.status(200).json(updatedCommonExpense);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to update common expense');
-    }
+// @desc    Get common expense summary by category
+// @route   GET /api/common-expenses/summary/category
+// @access  Public
+export const getCommonExpenseSummaryByCategory = async (req, res) => {
+  try {
+    const summary = await CommonExpense.aggregate([
+      { $match: { isActive: true } }, // Only consider active templates
+      { $group: { _id: '$category', totalAmount: { $sum: '$amount' } } },
+      { $sort: { totalAmount: -1 } },
+    ]);
+    res.status(200).json(summary);
+  } catch (err) {
+    console.error('Backend: getCommonExpenseSummaryByCategory - Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-/**
- * @route DELETE /api/common-expenses/:id
- * @desc Delete a common expense by ID
- * @access Public (or Private/Auth)
- */
-export const deleteCommonExpense = async (req, res) => {
-    console.log('CommonExpenseController: deleteCommonExpense - Request ID:', req.params.id);
-    try {
-        const commonExpense = await CommonExpense.findById(req.params.id);
-
-        if (!commonExpense) {
-            return res.status(404).json({ error: 'Common expense not found' });
-        }
-
-        // if (req.user && commonExpense.user.toString() !== req.user.id) { // Uncomment if you add user authentication
-        //     return res.status(401).json({ error: 'Not authorized to delete this common expense' });
-        // }
-
-        await CommonExpense.deleteOne({ _id: req.params.id });
-        console.log('CommonExpenseController: Common expense deleted:', req.params.id);
-        res.status(200).json({ message: 'Common expense removed successfully' });
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to delete common expense');
-    }
+// @desc    Get common expense summary by day of month
+// @route   GET /api/common-expenses/summary/day-of-month
+// @access  Public
+export const getCommonExpenseSummaryByDayOfMonth = async (req, res) => {
+  try {
+    const summary = await CommonExpense.aggregate([
+      { $match: { isActive: true } }, // Only consider active templates
+      { $group: { _id: '$dayOfMonth', totalAmount: { $sum: '$amount' } } },
+      { $sort: { _id: 1 } }, // Sort by day of month ascending
+    ]);
+    res.status(200).json(summary);
+  } catch (err) {
+    console.error('Backend: getCommonExpenseSummaryByDayOfMonth - Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// --- Analytics-related Controllers for Common Expenses ---
-
-/**
- * @route GET /api/common-expenses/summary/category
- * @desc Get common expense summary by category.
- * @access Public (or Private)
- */
-export const getCommonExpenseSummaryByCategoryController = async (req, res) => {
-    console.log('CommonExpenseController: getCommonExpenseSummaryByCategoryController - Request Query:', req.query);
-    try {
-        const summary = await getCommonExpenseSummaryByCategory(); // No year filter needed here
-        console.log('CommonExpenseController: getCommonExpenseSummaryByCategoryController - Fetched summary count:', summary.length);
-        res.status(200).json(summary);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to fetch common expense summary by category');
-    }
-};
-
-/**
- * @route GET /api/common-expenses/summary/day-of-month
- * @desc Get common expense summary by day of month.
- * @access Public (or Private)
- */
-export const getCommonExpenseSummaryByDayOfMonthController = async (req, res) => {
-    console.log('CommonExpenseController: getCommonExpenseSummaryByDayOfMonthController - Request Query:', req.query);
-    try {
-        const summary = await getCommonExpenseSummaryByDayOfMonth();
-        console.log('CommonExpenseController: getCommonExpenseSummaryByDayOfMonthController - Fetched summary count:', summary.length);
-        res.status(200).json(summary);
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to fetch common expense summary by day of month');
-    }
-};
-
-/**
- * @route GET /api/common-expenses/total-active
- * @desc Get total amount of all active common expenses.
- * @access Public (or Private)
- */
-export const getTotalActiveCommonExpensesAmountController = async (req, res) => {
-    console.log('CommonExpenseController: getTotalActiveCommonExpensesAmountController - Request Query:', req.query);
-    try {
-        const totalAmount = await getTotalActiveCommonExpensesAmount();
-        console.log('CommonExpenseController: getTotalActiveCommonExpensesAmountController - Fetched total amount:', totalAmount);
-        res.status(200).json({ totalAmount });
-    } catch (err) {
-        handleControllerError(res, err, 'Failed to fetch total active common expenses amount');
-    }
+// @desc    Get total amount of all active common expenses
+// @route   GET /api/common-expenses/total-active
+// @access  Public
+export const getTotalActiveCommonExpensesAmount = async (req, res) => {
+  try {
+    const result = await CommonExpense.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: null, totalAmount: { $sum: '$amount' } } },
+    ]);
+    const totalAmount = result.length > 0 ? result[0].totalAmount : 0;
+    res.status(200).json({ totalAmount });
+  } catch (err) {
+    console.error('Backend: getTotalActiveCommonExpensesAmount - Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 };

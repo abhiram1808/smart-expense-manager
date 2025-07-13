@@ -81,3 +81,8 @@ export const fetchMonthlyBudgetSummary = (year) => { // This should be present
   console.log(`budgetService: Fetching monthly budget summary for year ${year}.`);
   return axios.get(`${API_URL}/summary/monthly?year=${year}`);
 };
+
+export const fetchIncomeSummaryByCategory = (year, month) => {
+  console.log(`budgetService: Fetching income summary by category for year ${year}, month ${month}`);
+  return axios.get(`${API_URL}/income/summary/category`, { params: { year, month } });
+} 

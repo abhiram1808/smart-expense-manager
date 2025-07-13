@@ -1,21 +1,19 @@
-// src/hooks/useCommonExpenses.js
+// client/src/hooks/useCommonExpenseData.js
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import {
   createCommonExpense,
   fetchCommonExpenses,
-  updateCommonExpense,
+  updateCommonExpense, // This is the function being called
   deleteCommonExpense,
-  fetchCommonExpenseSummaryByCategory,
-  fetchCommonExpenseSummaryByDayOfMonth,
-  fetchTotalActiveCommonExpensesAmount
+  triggerRecurringExpenseGeneration,
 } from '../services/commonExpenseService';
-import { toast } from 'react-toastify';
 
 /**
- * Custom hook for managing common expense data.
- * Handles data fetching, loading, error states, and CRUD operations.
+ * Custom hook for managing common expense items, which are now recurring expense templates.
+ * Handles data fetching, loading, error states, and CRUD operations for CommonExpense model.
  */
-const useCommonExpenses = () => {
+const useCommonExpenseData = () => {
   const [commonExpenses, setCommonExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -23,137 +21,121 @@ const useCommonExpenses = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
 
-  // State for filters and sort
-  const [filters, setFilters] = useState({}); // <--- This setter is returned
-  const [sortBy, setSortBy] = useState('dayOfMonth'); // <--- This setter is returned
-
-  // Fetch all common expenses
+  // Fetch all common expenses (now recurring templates)
   const loadCommonExpenses = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log('useCommonExpenses: Attempting to fetch common expenses...');
-      const res = await fetchCommonExpenses(filters); // Use state filters
-      let fetchedData = res.data;
-
-      // Apply client-side sorting
-      fetchedData.sort((a, b) => {
-        if (sortBy === 'dayOfMonth') {
-          return a.dayOfMonth - b.dayOfMonth;
-        }
-        if (sortBy === 'name') {
-          return a.name.localeCompare(b.name);
-        }
-        if (sortBy === 'amount') {
-          return a.amount - b.amount;
-        }
-        if (sortBy === 'startDate') {
-          const dateA = new Date(a.startDate);
-          const dateB = new Date(b.startDate);
-          return dateA.getTime() - dateB.getTime();
-        }
-        // Add more sorting logic here if needed
-        return 0;
-      });
-
-      setCommonExpenses(fetchedData);
-      console.log('useCommonExpenses: Common expenses loaded and sorted:', fetchedData.length);
+      const response = await fetchCommonExpenses();
+      setCommonExpenses(response.data);
+      console.log('useCommonExpenseData: Fetched common expenses (recurring templates):', response.data.length);
     } catch (err) {
-      console.error("useCommonExpenses: Error fetching common expenses:", err);
+      console.error('useCommonExpenseData: Error fetching common expenses:', err.response?.data || err.message);
       setError(err);
-      setCommonExpenses([]);
       toast.error(`Failed to load common expenses: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsLoading(false);
     }
-  }, [filters, sortBy]); // Depend on filters and sortBy states
+  }, []);
 
-  // Initial data load effect and re-load on filter/sort change
-  useEffect(() => {
-    loadCommonExpenses();
-  }, [loadCommonExpenses]);
-
-  // --- CRUD Operations ---
-
-  const addCommonExpense = useCallback(async (commonExpenseData) => {
+  // Add a new common expense (now recurring template)
+  const addCommonExpense = useCallback(async (expenseData) => {
     setIsAdding(true);
+    setError(null);
     try {
-      const dataToSend = {
-        ...commonExpenseData,
-        startDate: commonExpenseData.startDate ? commonExpenseData.startDate.toISOString() : null,
-        endDate: commonExpenseData.endDate ? commonExpenseData.endDate.toISOString() : null,
-        termMonths: commonExpenseData.termMonths !== '' ? Number(commonExpenseData.termMonths) : null,
-      };
-      const res = await createCommonExpense(dataToSend);
-      toast.success('Common expense added successfully! 🔄');
-      loadCommonExpenses(); // Refetch to update the list with new item and current filters/sort
-      return res.data;
+      const response = await createCommonExpense(expenseData);
+      setCommonExpenses((prev) => [...prev, response.data]);
+      toast.success('Recurring expense template added successfully! 🔄');
+      return response.data;
     } catch (err) {
-      console.error('❌ Error adding common expense:', err);
-      toast.error(`Failed to add common expense: ${err.response?.data?.error || err.message || 'Unknown error'}`);
+      console.error('useCommonExpenseData: Error adding common expense:', err.response?.data || err.message);
+      setError(err);
+      toast.error(`Failed to add recurring expense template: ${err.response?.data?.error || err.message}`);
       throw err;
     } finally {
       setIsAdding(false);
     }
-  }, [loadCommonExpenses]);
+  }, []);
 
-  const updateCommonExpenseItem = useCallback(async (id, commonExpenseData) => {
+  // Update an existing common expense (now recurring template)
+  const updateCommonExpense = useCallback(async (id, updatedData) => {
     setIsUpdating(true);
+    setError(null);
     try {
-      const dataToSend = {
-        ...commonExpenseData,
-        startDate: commonExpenseData.startDate ? commonExpenseData.startDate.toISOString() : null,
-        endDate: commonExpenseData.endDate ? commonExpenseData.endDate.toISOString() : null,
-        termMonths: commonExpenseData.termMonths !== '' ? Number(commonExpenseData.termMonths) : null,
-      };
-      const res = await updateCommonExpense(id, dataToSend);
-      toast.success('Common expense updated successfully! ✨');
-      loadCommonExpenses(); // Refetch to update the list
-      return res.data;
+      const response = await updateCommonExpense(id, updatedData);
+      console.log('DEBUG: updateCommonExpense response data:', response.data); // <--- NEW DEBUG LOG
+      if (!response.data) {
+          throw new Error("Update response data is empty or invalid.");
+      }
+      setCommonExpenses((prev) =>
+        prev.map((expense) => (expense._id === id ? response.data : expense))
+      );
+      toast.success('Recurring expense template updated successfully! ✨');
+      return response.data;
     } catch (err) {
-      console.error('❌ Error updating common expense:', err);
-      toast.error(`Failed to update common expense: ${err.response?.data?.error || err.message || 'Unknown error'}`);
+      console.error('useCommonExpenseData: Error updating common expense:', err.response?.data || err.message);
+      setError(err);
+      toast.error(`Failed to update recurring expense template: ${err.response?.data?.error || err.message}`);
       throw err;
     } finally {
       setIsUpdating(false);
     }
-  }, [loadCommonExpenses]);
+  }, []);
 
-  const deleteCommonExpenseItem = useCallback(async (id) => {
+  // Delete a common expense (now recurring template)
+  const deleteCommonExpense = useCallback(async (id) => {
     setIsDeleting(true);
-    console.log(`useCommonExpenses: Attempting to delete common expense with ID: ${id}`);
+    setError(null);
     try {
       await deleteCommonExpense(id);
-      toast.success('Common expense deleted successfully! 🗑️');
-      loadCommonExpenses(); // Refetch to update the list
+      setCommonExpenses((prev) => prev.filter((expense) => expense._id !== id));
+      toast.success('Recurring expense template deleted successfully! 🗑️');
     } catch (err) {
-      console.error('❌ Error deleting common expense:', err);
-      toast.error(`Failed to delete common expense: ${err.response?.data?.error || err.message || 'Unknown error'}`);
+      console.error('useCommonExpenseData: Error deleting common expense:', err.response?.data || err.message);
+      setError(err);
+      toast.error(`Failed to delete recurring expense template: ${err.response?.data?.error || err.message}`);
       throw err;
     } finally {
       setIsDeleting(false);
     }
-  }, [loadCommonExpenses]);
+  }, []);
 
-  const fetchCommonExpenseAnalytics = useCallback(async () => {
+  // Toggle active status of a template
+  const toggleTemplateActiveStatus = useCallback(async (templateId, currentStatus) => {
+    setIsUpdating(true);
+    setError(null);
     try {
-      const [summaryByCategory, summaryByDay, totalActive] = await Promise.all([
-        fetchCommonExpenseSummaryByCategory(),
-        fetchCommonExpenseSummaryByDayOfMonth(),
-        fetchTotalActiveCommonExpensesAmount()
-      ]);
-      return {
-        summaryByCategory: summaryByCategory.data,
-        summaryByDay: summaryByDay.data,
-        totalActive: totalActive.data.totalAmount
-      };
+      // Call the update endpoint with the new isActive status
+      // This calls the updateCommonExpense function defined above
+      const response = await updateCommonExpense(templateId, { isActive: !currentStatus });
+      // The setCommonExpenses logic is now handled by the updateCommonExpense callback itself
+      toast.success(`Template ${response.isActive ? 'activated' : 'paused'} successfully!`); // Use response.isActive directly
+      return response; // Return the updated template
     } catch (err) {
-      console.error('❌ Error fetching common expense analytics:', err);
-      toast.error('Failed to load common expense analytics.');
+      console.error('useCommonExpenseData: Error toggling template status:', err);
+      setError(err);
+      toast.error(`Failed to toggle template status: ${err.response?.data?.error || err.message}`);
       throw err;
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [updateCommonExpense]); // Add updateCommonExpense to dependencies
+
+  // Trigger the backend automation for recurring expenses
+  const triggerGeneration = useCallback(async () => {
+    try {
+      const response = await triggerRecurringExpenseGeneration();
+      toast.info(response.data.message || 'Recurring expenses generation triggered.');
+    } catch (err) {
+      console.error('useCommonExpenseData: Error triggering generation:', err);
+      toast.error(`Failed to trigger generation: ${err.response?.data?.error || err.message}`);
     }
   }, []);
 
+  // Initial load of common expenses
+  useEffect(() => {
+    loadCommonExpenses();
+  }, [loadCommonExpenses]);
 
   return {
     commonExpenses,
@@ -163,13 +145,12 @@ const useCommonExpenses = () => {
     isDeleting,
     error,
     addCommonExpense,
-    updateCommonExpenseItem,
-    deleteCommonExpenseItem,
+    updateCommonExpense,
+    deleteCommonExpense,
+    toggleTemplateActiveStatus,
+    triggerGeneration,
     refetchCommonExpenses: loadCommonExpenses,
-    fetchCommonExpenseAnalytics,
-    setFilters, // <--- EXPLICITLY RETURNED
-    setSortBy,  // <--- EXPLICITLY RETURNED
   };
 };
 
-export default useCommonExpenses;
+export default useCommonExpenseData;

@@ -1,101 +1,140 @@
-// src/components/CommonExpenses/CommonExpenseSummary.jsx
+// client/src/components/CommonExpense/CommonExpenseSummary.jsx
 import React, { useEffect, useState } from 'react';
-import { FaMoneyBillWave, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import { toast } from 'react-toastify';
-import { fetchTotalActiveCommonExpensesAmount } from '../../services/commonExpenseService';
+import {
+  fetchCommonExpenseSummaryByCategory, // <--- VERIFY THIS IMPORT
+  fetchCommonExpenseSummaryByDayOfMonth, // <--- VERIFY THIS IMPORT
+  fetchTotalActiveCommonExpensesAmount, // <--- VERIFY THIS IMPORT
+} from '../../services/commonExpenseService';
+import ErrorDisplay from '../common/ErrorDisplay';
 import SkeletonLoader from '../common/SkeletonLoader';
+import { FaChartPie, FaCalendarDay, FaDollarSign } from 'react-icons/fa';
 
 /**
- * Displays a summary of common expenses, including total active amount,
- * and counts of active/inactive expenses.
- * @param {object} props - Component props.
- * @param {Array<Object>} props.commonExpenses - The full list of common expenses to derive counts.
- * @param {boolean} props.isLoading - Loading state from the parent hook.
+ * Displays summary information for recurring expense templates.
+ * Includes total active amount, summary by category, and summary by day of month.
  */
-const CommonExpenseSummary = ({ commonExpenses, isLoading }) => {
-  const [totalActiveAmount, setTotalActiveAmount] = useState(0);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState(null);
+const CommonExpenseSummary = () => {
+  const [summaryData, setSummaryData] = useState({
+    totalActiveAmount: 0,
+    categorySummary: [],
+    dayOfMonthSummary: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadSummary = async () => {
-      setSummaryLoading(true);
-      setSummaryError(null);
+    const getSummaries = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const res = await fetchTotalActiveCommonExpensesAmount();
-        setTotalActiveAmount(res.data.totalAmount || 0);
+        const [
+          totalActiveRes,
+          categoryRes,
+          dayOfMonthRes,
+        ] = await Promise.all([
+          fetchTotalActiveCommonExpensesAmount(),
+          fetchCommonExpenseSummaryByCategory(),
+          fetchCommonExpenseSummaryByDayOfMonth(),
+        ]);
+
+        setSummaryData({
+          totalActiveAmount: totalActiveRes.data.totalAmount || 0,
+          categorySummary: categoryRes.data || [],
+          dayOfMonthSummary: dayOfMonthRes.data || [],
+        });
       } catch (err) {
-        console.error("Error fetching total active common expenses amount:", err);
-        setSummaryError(err);
-        toast.error("Failed to load common expense summary.");
+        console.error('Error fetching common expense summaries:', err.response?.data || err.message);
+        setError(err);
       } finally {
-        setSummaryLoading(false);
+        setIsLoading(false);
       }
     };
 
-    loadSummary();
-  }, []); // Run once on mount
+    getSummaries();
+  }, []);
 
-  const activeCount = commonExpenses.filter(exp => exp.isActive).length;
-  const inactiveCount = commonExpenses.filter(exp => !exp.isActive).length;
-
-  if (isLoading || summaryLoading) {
+  if (isLoading) {
     return (
-      <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <SkeletonLoader type="card" className="h-100" />
-        </div>
-        <div className="col-md-4">
-          <SkeletonLoader type="card" className="h-100" />
-        </div>
-        <div className="col-md-4">
-          <SkeletonLoader type="card" className="h-100" />
-        </div>
+      <div className="row">
+        <div className="col-md-4 mb-4"><SkeletonLoader type="card" /></div>
+        <div className="col-md-4 mb-4"><SkeletonLoader type="card" /></div>
+        <div className="col-md-4 mb-4"><SkeletonLoader type="card" /></div>
       </div>
     );
   }
 
-  if (summaryError) {
+  if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-        Error loading summary: {summaryError.message || 'Please check backend connection.'}
-      </div>
+      <ErrorDisplay
+        error={error}
+        message="Failed to load recurring expense summaries."
+      />
     );
   }
 
   return (
-    <div className="row g-3 mb-4">
-      {/* Total Active Recurring Amount Card */}
-      <div className="col-md-4">
-        <div className="card shadow-lg h-100 border-primary" style={{ borderRadius: '15px', backgroundColor: '#e0f7fa' }}> {/* Enhanced styling */}
-          <div className="card-body d-flex flex-column justify-content-center align-items-center p-4">
-            <FaMoneyBillWave className="text-primary mb-3" size={40} /> {/* Larger icon */}
-            <h6 className="card-title text-primary fw-bold mb-1">Total Active Recurring Amount</h6>
-            <p className="display-5 text-primary mb-0 fw-bold"> {/* Larger, bolder text */}
-              ₹{totalActiveAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    <div className="row">
+      {/* Total Active Amount */}
+      <div className="col-md-4 mb-4">
+        <div className="card shadow-sm h-100" style={{ borderRadius: '12px' }}>
+          <div className="card-body d-flex flex-column justify-content-between">
+            <h5 className="card-title text-primary d-flex align-items-center mb-3">
+              <FaDollarSign className="me-2" /> Total Active Recurring Amount
+            </h5>
+            <p className="card-text fs-3 fw-bold text-center">
+              ₹{summaryData.totalActiveAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
+            <p className="text-muted text-center mb-0">Sum of all active recurring expense templates per month.</p>
           </div>
         </div>
       </div>
 
-      {/* Active Count Card */}
-      <div className="col-md-4">
-        <div className="card shadow-lg h-100 border-success" style={{ borderRadius: '15px', backgroundColor: '#e8f5e9' }}> {/* Enhanced styling */}
-          <div className="card-body d-flex flex-column justify-content-center align-items-center p-4">
-            <FaCheckCircle className="text-success mb-3" size={40} /> {/* Larger icon */}
-            <h6 className="card-title text-success fw-bold mb-1">Active Recurring Expenses</h6>
-            <p className="display-5 text-success mb-0 fw-bold">{activeCount}</p> {/* Larger, bolder text */}
+      {/* Summary by Category */}
+      <div className="col-md-4 mb-4">
+        <div className="card shadow-sm h-100" style={{ borderRadius: '12px' }}>
+          <div className="card-body d-flex flex-column">
+            <h5 className="card-title text-primary d-flex align-items-center mb-3">
+              <FaChartPie className="me-2" /> Recurring by Category
+            </h5>
+            {summaryData.categorySummary.length > 0 ? (
+              <ul className="list-group list-group-flush flex-grow-1">
+                {summaryData.categorySummary.map((item, index) => (
+                  <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{item._id}</span>
+                    <span className="badge bg-secondary rounded-pill">
+                      ₹{item.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted text-center mt-3">No recurring expenses by category.</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Inactive Count Card */}
-      <div className="col-md-4">
-        <div className="card shadow-lg h-100 border-danger" style={{ borderRadius: '15px', backgroundColor: '#ffebee' }}> {/* Enhanced styling */}
-          <div className="card-body d-flex flex-column justify-content-center align-items-center p-4">
-            <FaTimesCircle className="text-danger mb-3" size={40} /> {/* Larger icon */}
-            <h6 className="card-title text-danger fw-bold mb-1">Inactive Recurring Expenses</h6>
-            <p className="display-5 text-danger mb-0 fw-bold">{inactiveCount}</p> {/* Larger, bolder text */}
+      {/* Summary by Day of Month */}
+      <div className="col-md-4 mb-4">
+        <div className="card shadow-sm h-100" style={{ borderRadius: '12px' }}>
+          <div className="card-body d-flex flex-column">
+            <h5 className="card-title text-primary d-flex align-items-center mb-3">
+              <FaCalendarDay className="me-2" /> Recurring by Day of Month
+            </h5>
+            {summaryData.dayOfMonthSummary.length > 0 ? (
+              <ul className="list-group list-group-flush flex-grow-1">
+                {summaryData.dayOfMonthSummary.map((item, index) => (
+                  <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                    <span>Day {item._id}</span>
+                    <span className="badge bg-secondary rounded-pill">
+                      ₹{item.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted text-center mt-3">No recurring expenses by day of month.</p>
+            )}
           </div>
         </div>
       </div>

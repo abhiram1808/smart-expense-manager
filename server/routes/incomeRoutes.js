@@ -1,36 +1,25 @@
-// backend/routes/incomeRoutes.js
+// server/routes/incomeRoutes.js
 import express from 'express';
-import {
-    createIncome,
-    getAllIncomes,
-    updateIncome,
-    deleteIncome,
-    getIncomeGroupedByMonth,
-    getMonthlyIncomeSummary,
-    getIncomeSummaryBySourceController,
-    getIncomeBySourceMonthlyController, // NEW: Import the new controller
-    getIncomeByDateRangeController,
-    getIncomeBySourceAndMonthController,
-    getIncomeByAmountRangeAndMonthController
-} from '../controllers/incomeController.js';
+import * as incomeController from '../controllers/incomeController.js';
 
 const router = express.Router();
 
 // --- CRUD Routes ---
-router.post('/', createIncome);
-router.get('/', getAllIncomes);
-router.put('/:id', updateIncome);
-router.delete('/:id', deleteIncome);
+router.post('/', incomeController.createIncome);
+router.get('/', incomeController.getIncomes); // <--- CHANGED FROM getAllIncomes to getIncomes
+router.put('/:id', incomeController.updateIncome);
+router.delete('/:id', incomeController.deleteIncome);
 
 // --- Analytics & Grouped List Routes ---
-router.get('/grouped-by-month', getIncomeGroupedByMonth);
-router.get('/summary/monthly', getMonthlyIncomeSummary);
-router.get('/summary/source', getIncomeSummaryBySourceController);
-router.get('/summary/source-monthly', getIncomeBySourceMonthlyController); // NEW ROUTE
+router.get('/summary/category', incomeController.getIncomeSummaryByCategory);
+router.get('/grouped-by-month', incomeController.getIncomeGroupedByMonth);
+router.get('/summary/monthly', incomeController.getMonthlyIncomeSummary);
+router.get('/summary/source', incomeController.getIncomeSummaryBySource);
+router.get('/summary/source-monthly', incomeController.getIncomeBySourceMonthly);
 
 // --- Other Specific Query Routes (if needed by frontend) ---
-router.get('/daterange', getIncomeByDateRangeController);
-router.get('/source-month', getIncomeBySourceAndMonthController);
-router.get('/amount-month', getIncomeByAmountRangeAndMonthController);
+router.get('/daterange', incomeController.getIncomeByDateRange);
+router.get('/source-month', incomeController.getIncomeBySourceAndMonth);
+router.get('/amount-month', incomeController.getIncomeByAmountRangeAndMonth);
 
 export default router;

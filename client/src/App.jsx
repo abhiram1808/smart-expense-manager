@@ -8,7 +8,7 @@ import Sidebar from './components/Sidebar';
 import MonthlyIncomePage from './pages/MonthlyIncomePage';
 import MonthlyBudgetPage from './pages/MonthlyBudgetPage';
 import CommonExpensesPage from './pages/CommonExpensesPage';
-import ExpenseListPage from './pages/ExpenseListPage'; // Consolidated Expense Page
+import ExpenseHistoryPage from './pages/ExpenseHistoryPage'; // Consolidated Expense Page
 import AnalyticsPage from './pages/AnalyticsPage'; // Your existing income/overview analytics page
 import AdminPage from './pages/AdminPage';
 import DashboardPage from './pages/DashboardPage';
@@ -21,6 +21,7 @@ import ExpenseAnalyticsPage from './pages/ExpenseAnalyticsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import DailyExpensesPage from './pages/DailyExpensesPage';
 // import 'animate.css/animate.min.css';
 
 
@@ -35,10 +36,11 @@ const App = () => {
         <div style={{ flex: 1, padding: '2rem', background: '#f8f9fa' }}>
           <Routes>
             {/* Existing Routes */}
+            <Route path="/daily-expenses" element={<DailyExpensesPage />} />
             <Route path="/monthly-income" element={<MonthlyIncomePage />} />
             <Route path="/monthly-budget" element={<MonthlyBudgetPage />} />
             <Route path="/common-expenses" element={<CommonExpensesPage />} />
-            <Route path="/expenses" element={<ExpenseListPage />} />
+            <Route path="/expenses" element={<ExpenseHistoryPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />

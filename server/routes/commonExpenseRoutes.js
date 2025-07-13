@@ -1,30 +1,20 @@
-// backend/routes/commonExpenseRoutes.js
+// server/routes/commonExpenseRoutes.js
 import express from 'express';
-import {
-    createCommonExpense,
-    getCommonExpenses,
-    getCommonExpenseById,
-    updateCommonExpense,
-    deleteCommonExpense,
-    getCommonExpenseSummaryByCategoryController, // This is now correct
-    getCommonExpenseSummaryByDayOfMonthController, // This is now correct
-    getTotalActiveCommonExpensesAmountController // This is now correct
-} from '../controllers/commonExpenseController.js'; // ALL these functions are exported by commonExpenseController.js
-
 const router = express.Router();
+import * as commonExpenseController from '../controllers/commonExpenseController.js';
 
-// --- Analytics Routes (More specific, should come before /:id) ---
-router.get('/summary/category', getCommonExpenseSummaryByCategoryController);
-router.get('/summary/day-of-month', getCommonExpenseSummaryByDayOfMonthController);
-router.get('/total-active', getTotalActiveCommonExpensesAmountController); // Specific total route
+// Routes for managing common expense templates (recurring expenses)
+router.post('/', commonExpenseController.createCommonExpense);
+router.get('/', commonExpenseController.getCommonExpenses);
+router.put('/:id', commonExpenseController.updateCommonExpense);
+router.delete('/:id', commonExpenseController.deleteCommonExpense);
 
-// --- CRUD Routes ---
-router.post('/', createCommonExpense);
-router.get('/', getCommonExpenses); // General GET, can be used for flat list or filtered
+// Automation trigger route
+router.post('/generate', commonExpenseController.generateRecurringExpenses);
 
-// --- Specific GET by ID, PUT, DELETE (Wildcard routes, must come LAST) ---
-router.get('/:id', getCommonExpenseById);
-router.put('/:id', updateCommonExpense);
-router.delete('/:id', deleteCommonExpense);
+// Analytics routes for common expenses (recurring templates)
+router.get('/summary/category', commonExpenseController.getCommonExpenseSummaryByCategory);
+router.get('/summary/day-of-month', commonExpenseController.getCommonExpenseSummaryByDayOfMonth);
+router.get('/total-active', commonExpenseController.getTotalActiveCommonExpensesAmount); // <--- Matches frontend service
 
 export default router;

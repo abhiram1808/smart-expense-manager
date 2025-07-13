@@ -1,43 +1,36 @@
-// src/components/Admin/AdminAutoInsertButton.jsx
+// client/src/components/Admin/AdminAutoInsertButton.jsx
 import React, { useState } from 'react';
-import { runAutoInsert } from '../../services/commonExpenseService'; // <--- Now this import will work!
-import { toast } from 'react-toastify'; // Import toast for user feedback
+import { FaSyncAlt } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+// Import the correctly named function from your commonExpenseService
+import { triggerRecurringExpenseGeneration } from '../../services/commonExpenseService'; // <--- CORRECTED IMPORT
 
-/**
- * Admin button component to manually trigger the common expense auto-insertion process.
- */
 const AdminAutoInsertButton = () => {
-  const [loading, setLoading] = useState(false);
-  // Removed local status state, will rely on toast for feedback directly
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleClick = async () => {
-    setLoading(true);
+  const handleGenerate = async () => {
+    setIsGenerating(true);
     try {
-      const res = await runAutoInsert();
-      toast.success('✅ ' + (res.data.message || 'Auto-insertion triggered successfully!'));
-    } catch (err) {
-      console.error('❌ Failed to trigger auto-insert:', err);
-      toast.error('❌ Failed: ' + (err.response?.data?.error || err.message || 'Unknown error'));
+      // Call the correctly named function
+      const response = await triggerRecurringExpenseGeneration(); // <--- CORRECTED FUNCTION CALL
+      toast.success(response.data.message || 'Recurring expenses generated successfully!');
+    } catch (error) {
+      console.error('Error triggering auto-insertion:', error);
+      toast.error(`Failed to trigger auto-insertion: ${error.response?.data?.error || error.message}`);
     } finally {
-      setLoading(false);
+      setIsGenerating(false);
     }
   };
 
   return (
-    <div className="card shadow-sm p-3" style={{ borderRadius: '12px', backgroundColor: '#fff' }}>
-      <h5 className="mb-3 text-primary">⚙️ Admin: Trigger Auto Insert</h5>
-      <p className="text-muted mb-3">Manually run the process that inserts recurring expenses based on your Common Expenses definitions. This runs automatically via cron daily, but can be triggered here for testing or immediate needs.</p>
-      <button className="btn btn-primary" onClick={handleClick} disabled={loading}>
-        {loading ? (
-          <>
-            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Running...
-          </>
-        ) : (
-          'Run Auto Insert Now'
-        )}
-      </button>
-    </div>
+    <button
+      className="btn btn-info text-white d-flex align-items-center"
+      onClick={handleGenerate}
+      disabled={isGenerating}
+    >
+      <FaSyncAlt className="me-2" />
+      {isGenerating ? 'Generating...' : 'Run Recurring Expense Automation'}
+    </button>
   );
 };
 

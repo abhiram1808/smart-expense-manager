@@ -92,3 +92,8 @@ export const fetchIncomeByAmountRangeAndMonth = (min, max, month) => {
   console.log(`incomeService: Fetching income by amount range ${min}-${max} for month ${month}.`);
   return axios.get(`${API_URL}/amount-month`, { params: { min, max, month } });
 };
+
+export const fetchIncomeSummaryByCategory = (year, month) => {
+  console.log(`incomeService: Fetching income summary by category for year ${year} and month ${month}.`);
+  return axios.get(`${API_URL}/summary/category`, { params: { year, month } });
+}
